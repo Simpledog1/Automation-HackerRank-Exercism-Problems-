@@ -1,6 +1,6 @@
 {
   "daily_limit": 2,
-  "uploads_enabled": false,
+  "uploads_enabled": true,
   "max_downloads_per_run": 10,
   "repos": {
     "hackerrank": {
