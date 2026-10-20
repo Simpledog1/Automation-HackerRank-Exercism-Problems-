@@ -124,6 +124,7 @@ def read_export(path: Path) -> tuple[list[Candidate], int]:
             completed_at=when, files={"1.py" if lang.startswith(("python", "pypy")) else "solution.txt":
                                       str(code).encode("utf-8")},
             source_ref=str(r.get("id", "")),
+            title_from_slug=not name,
         )
         # keep the newest accepted submission per challenge + language
         if c.key not in best or when > best[c.key].completed_at:

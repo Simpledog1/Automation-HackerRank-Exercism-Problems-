@@ -30,6 +30,7 @@ class Candidate:
     completed_at: str = ""
     files: dict[str, bytes] | None = None   # file name -> content; None = not downloaded yet
     source_ref: str = ""          # submission id / solution uuid
+    title_from_slug: bool = False  # True if the real display title was not available
     status: str = ""
     dest_paths: list[str] = field(default_factory=list)
     note: str = ""

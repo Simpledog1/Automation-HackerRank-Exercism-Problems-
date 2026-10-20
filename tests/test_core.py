@@ -45,6 +45,13 @@ class MatchingTests(unittest.TestCase):
         self.assertEqual(c.status, ELIGIBLE)
         self.assertEqual(c.dest_paths, ["Python/Pangram/pangram.py"])
 
+    def test_02c_slug_only_title_goes_to_review(self):
+        c = cand("hackerrank", "validate-a-roman-number:python3", "Validate A Roman Number",
+                 "python3", files={"1.py": b"print('roman')\n"})
+        c.title_from_slug = True
+        classify(c, REPO, PY)
+        self.assertEqual(c.status, NEEDS_REVIEW)
+
     def test_02b_missing_without_source_needs_download(self):
         c = cand()
         classify(c, REPO, PY)
@@ -89,6 +96,10 @@ class MatchingTests(unittest.TestCase):
         classify(c, REPO, PY)
         self.assertEqual(c.status, PRESENT)
         self.assertIn("Python/Bob/bob.py", c.note)
+        crlf = cand(item="python/bob-crlf", title="Bob CRLF",
+                    files={"bob.py": data.replace(b"\n", b"\r\n")})
+        classify(crlf, REPO, PY)
+        self.assertEqual(crlf.status, PRESENT)
 
     def test_21_unsafe_names(self):
         self.assertIsNone(safe_name("CON"))

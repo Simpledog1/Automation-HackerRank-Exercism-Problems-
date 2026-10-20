@@ -5,6 +5,7 @@
   status         today's quota, unfinished uploads, items needing attention
   check          check repositories and platform access only
   reset-item KEY let a failed item be retried now (e.g. exercism:python/bob)
+  inspect-export show the structure of your HackerRank export (no code or values)
 """
 from __future__ import annotations
 
@@ -57,6 +58,39 @@ def print_summary(s: dict) -> None:
             print(f"    git: {item['git']}")
 
 
+def inspect_export(cfg) -> int:
+    """Print the key structure of the newest HackerRank export (names and types only, no values)."""
+    from . import hackerrank_source as hr
+    path = hr.newest_export(cfg.hackerrank_inbox) if cfg.hackerrank_inbox.exists() else None
+    if not path:
+        print(f"No export file in {cfg.hackerrank_inbox}")
+        return runner.EXIT_PARTIAL
+    shapes: dict[str, set[str]] = {}
+
+    def walk(node, prefix: str, depth: int) -> None:
+        if depth > 6:
+            return
+        if isinstance(node, dict):
+            for k, v in node.items():
+                shapes.setdefault(f"{prefix}.{k}", set()).add(type(v).__name__)
+                walk(v, f"{prefix}.{k}", depth + 1)
+        elif isinstance(node, list):
+            for v in node[:50]:
+                walk(v, prefix + "[]", depth + 1)
+
+    for i, doc in enumerate(hr._load_json_docs(path)):
+        walk(doc, f"doc{i}", 0)
+    print(f"Export: {path.name}")
+    for key in sorted(shapes):
+        print(f"  {key}: {', '.join(sorted(shapes[key]))}")
+    try:
+        cands, seen = hr.read_export(path)
+        print(f"Reader result: {seen} submission records, {len(cands)} accepted solutions")
+    except hr.ExportFormatError as exc:
+        print(f"Reader result: {exc}")
+    return runner.EXIT_OK
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="solsync", description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -67,6 +101,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("check")
     reset = sub.add_parser("reset-item")
     reset.add_argument("key")
+    sub.add_parser("inspect-export")
     args = parser.parse_args(argv)
 
     try:
@@ -80,6 +115,9 @@ def main(argv: list[str] | None = None) -> int:
         code, summary = runner.run(cfg, dry_run=args.dry_run)
         print_summary(summary)
         return code
+
+    if args.cmd == "inspect-export":
+        return inspect_export(cfg)
 
     if args.cmd == "check":
         ok = True

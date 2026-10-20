@@ -263,6 +263,13 @@ def run(cfg: Config, dry_run: bool) -> tuple[int, dict]:
         summary["status"], code = f"failed: {exc}", EXIT_FAILED
     summary["finished"] = manila_now().isoformat(timespec="seconds")
     summary["exit_code"] = code
+    for p, info in summary.get("platforms", {}).items():
+        log.info("%s: access=%s repo_ok=%s problems=%s", p, info["access"], info["repo_ok"],
+                 info["repo_problems"])
+        for it in info["items"]:
+            log.info("  %s %s %s %s", it["status"], it["item"], it["dest"], it["note"])
+    log.info("Run %s finished: status=%s exit=%s counts=%s quota=%s", run_id,
+             summary.get("status"), code, summary.get("counts"), summary.get("quota"))
     try:
         cfg.state_dir.mkdir(parents=True, exist_ok=True)
         name = "last_run.json" if live else "last_dry_run.json"

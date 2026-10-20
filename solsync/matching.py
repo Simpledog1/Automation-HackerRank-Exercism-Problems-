@@ -100,8 +100,9 @@ def classify(c: Candidate, repo_files: dict[str, str], language_dirs: dict[str, 
     # 1. Same content anywhere in the repo => already uploaded (maybe under another name).
     if c.files:
         blob_to_path = {sha: p for p, sha in repo_files.items()}
-        hits = [blob_to_path[git_blob_sha(d)] for d in c.files.values()
-                if git_blob_sha(d) in blob_to_path]
+        # Git may store a CRLF file with LF endings, so try both forms.
+        shas = {git_blob_sha(v) for d in c.files.values() for v in (d, d.replace(b"\r\n", b"\n"))}
+        hits = sorted(blob_to_path[s] for s in shas if s in blob_to_path)
         if hits:
             c.status, c.note = PRESENT, f"same content at {hits[0]}"
             return
@@ -126,6 +127,11 @@ def classify(c: Candidate, repo_files: dict[str, str], language_dirs: dict[str, 
     # 3. Genuinely missing. We need the source to know file names and validate it.
     if c.files is None:
         c.status = NEEDS_SOURCE
+        return
+    if c.title_from_slug:
+        # e.g. slug "validate-a-roman-number" vs folder "Validating Roman Numerals":
+        # without the real title we cannot rule out a duplicate under another name.
+        c.status, c.note = NEEDS_REVIEW, "only the challenge slug is known, not its title"
         return
     folder = safe_name(c.title)
     if not folder:
