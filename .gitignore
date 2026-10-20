@@ -1,0 +1,18 @@
+# runtime data (private, machine-specific)
+state/
+logs/
+inbox/
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+# editors / OS
+.vscode/
+.idea/
+Thumbs.db
+# never commit secrets or browser data
+*.token
+*.secret
+.env
+browser-profile/

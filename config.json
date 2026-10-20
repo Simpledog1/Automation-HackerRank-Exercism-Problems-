@@ -1,0 +1,26 @@
+{
+  "daily_limit": 2,
+  "uploads_enabled": false,
+  "max_downloads_per_run": 10,
+  "repos": {
+    "hackerrank": {
+      "path": "G:/DAILY/HackerRank-Problems",
+      "remote_url": "https://github.com/Simpledog1/HackerRank-Problems.git",
+      "branch": "main",
+      "language_dirs": {"python3": "Python", "python": "Python", "pypy3": "Python"}
+    },
+    "exercism": {
+      "path": "G:/DAILY/Exercism-Problems",
+      "remote_url": "https://github.com/Simpledog1/Exercism-Problems.git",
+      "branch": "main",
+      "language_dirs": {"python": "Python"}
+    }
+  },
+  "exercism": {
+    "api_base": "https://api.exercism.org",
+    "credential_target": "SolutionSync-Exercism"
+  },
+  "hackerrank": {
+    "inbox": "inbox/hackerrank"
+  }
+}
