@@ -49,7 +49,9 @@ no Claude session or paid service.
 
 The tool copies the folder layout your repos already use:
 
-- **HackerRank (Python):** `Python/<Challenge Name>/1.py`
+- **HackerRank, Python section:** `Python/<Challenge Name>/1.py`
+- **HackerRank, Problem Solving** (Algorithms and Data Structures) in Python: `Problem Solving (Python)/<Challenge Name>/1.py`
+- **Other HackerRank sections** (for example 30 Days of Code) and other languages go to `needs_review` and are never uploaded automatically. The export doesn't say which section a challenge is from, so the tool looks it up in `solsync/hackerrank_sections.json`. That file was made once from HackerRank's public challenge lists; `python scripts\build_hackerrank_sections.py` rebuilds it if HackerRank adds new challenges.
 - **Exercism (Python track):** `Python/<Exercise Title>/<your file>.py`, using exactly the solution file Exercism lists for that exercise (for example `bob.py`)
 
 Other languages are flagged `needs_review` until you add a mapping under `language_dirs` in

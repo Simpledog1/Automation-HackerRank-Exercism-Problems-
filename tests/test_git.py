@@ -40,7 +40,8 @@ def cand(platform, n, files=None):
     return Candidate(platform=platform, item_id=f"python/ex{n}" if platform == "exercism" else f"ex{n}:python3",
                      title=f"Ex {n}", language="python" if platform == "exercism" else "python3",
                      url="https://example.test", method="test", evidence="test",
-                     files=files or {"1.py" if platform == "hackerrank" else f"ex{n}.py": f"print({n})\n".encode()})
+                     files=files or {"1.py" if platform == "hackerrank" else f"ex{n}.py": f"print({n})\n".encode()},
+                     top_dir="Python" if platform == "hackerrank" else "")
 
 
 class GitFlowTests(unittest.TestCase):

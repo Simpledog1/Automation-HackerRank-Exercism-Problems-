@@ -79,12 +79,12 @@ def validate_source(files: dict[str, bytes]) -> str | None:
     return None
 
 
-def exercise_dirs(repo_files: dict[str, str], top_dir: str) -> dict[str, list[str]]:
-    """normalized exercise folder name -> [folder paths] under one language folder."""
+def exercise_dirs(repo_files: dict[str, str], top_dir: str | None) -> dict[str, list[str]]:
+    """normalized exercise folder name -> [folder paths] under one top folder (None = any)."""
     out: dict[str, list[str]] = {}
     for path in repo_files:
         parts = path.split("/")
-        if len(parts) >= 3 and parts[0] == top_dir:
+        if len(parts) >= 3 and top_dir in (None, parts[0]):
             folder = f"{parts[0]}/{parts[1]}"
             bucket = out.setdefault(normalize(parts[1]), [])
             if folder not in bucket:
@@ -107,10 +107,15 @@ def classify(c: Candidate, repo_files: dict[str, str], language_dirs: dict[str, 
             c.status, c.note = PRESENT, f"same content at {hits[0]}"
             return
 
-    top = language_dirs.get(c.language)
-    if not top:
-        c.status, c.note = NEEDS_REVIEW, f"no folder convention for language '{c.language}'"
-        return
+    if c.platform == "hackerrank":
+        # Folder comes from the challenge's section. If unknown, still look for an
+        # existing folder of that name anywhere, so nothing gets uploaded twice.
+        top = c.top_dir or None
+    else:
+        top = language_dirs.get(c.language)
+        if not top:
+            c.status, c.note = NEEDS_REVIEW, f"no folder convention for language '{c.language}'"
+            return
 
     # 2. A folder with the same normalized exercise name => already uploaded.
     dirs = exercise_dirs(repo_files, top)
@@ -125,6 +130,10 @@ def classify(c: Candidate, repo_files: dict[str, str], language_dirs: dict[str, 
         return
 
     # 3. Genuinely missing. We need the source to know file names and validate it.
+    if not top:
+        c.status, c.note = NEEDS_REVIEW, ("no folder rule: not a Python or Problem Solving "
+                                          f"challenge in {c.language} (place it by hand)")
+        return
     if c.files is None:
         c.status = NEEDS_SOURCE
         return

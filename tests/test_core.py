@@ -52,6 +52,25 @@ class MatchingTests(unittest.TestCase):
         classify(c, REPO, PY)
         self.assertEqual(c.status, NEEDS_REVIEW)
 
+    def test_hackerrank_folder_follows_section(self):
+        cands = [cand("hackerrank", f"x{i}:python", t, lang, files={"1.py": f"print('{t}')\n".encode()})
+                 for i, (t, lang) in enumerate([("2D Array - DS", "python3"), ("sWAP cASE", "pypy3"),
+                                                ("Day 0: Hello, World.", "python3"),
+                                                ("Welcome to Java!", "java")])]
+        hackerrank_source.assign_sections(cands, PY | {"pypy3": "Python"})
+        for c in cands:
+            classify(c, REPO, PY)
+        ps, py, days, java = cands
+        self.assertEqual(ps.dest_paths, ["Problem Solving (Python)/2D Array - DS/1.py"])
+        self.assertEqual(py.dest_paths, ["Python/sWAP cASE/1.py"])
+        self.assertEqual(days.status, NEEDS_REVIEW)   # 30 Days of Code: not uploaded
+        self.assertEqual(java.status, NEEDS_REVIEW)   # other language: not uploaded
+
+    def test_hackerrank_unknown_section_still_detects_existing_folder(self):
+        c = cand("hackerrank", "bob:python", "Bob", "python3", files={"1.py": b"print('other')\n"})
+        classify(c, REPO, PY)  # no section known, but Python/Bob exists
+        self.assertEqual(c.status, PRESENT)
+
     def test_02b_missing_without_source_needs_download(self):
         c = cand()
         classify(c, REPO, PY)

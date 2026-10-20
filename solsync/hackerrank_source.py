@@ -143,6 +143,24 @@ def read_export(path: Path) -> tuple[list[Candidate], int]:
     return out, len(records)
 
 
+SECTIONS_FILE = Path(__file__).with_name("hackerrank_sections.json")
+
+
+def assign_sections(cands: list[Candidate], language_dirs: dict[str, str]) -> None:
+    """Set each candidate's repo folder from its HackerRank section.
+
+    Only languages listed in config (the Python family) get a folder; the section
+    list comes from scripts/build_hackerrank_sections.py. Unknown sections and other
+    languages keep top_dir "" and go to review.
+    """
+    from .matching import normalize
+    sections = json.loads(SECTIONS_FILE.read_text(encoding="utf-8"))
+    folder_by_name = {normalize(n): folder for folder, names in sections.items() for n in names}
+    for c in cands:
+        if c.language in language_dirs:
+            c.top_dir = folder_by_name.get(normalize(c.title), "")
+
+
 def _completion_evidence(r: dict) -> str | None:
     """Why this submission counts as solved, or None if it doesn't."""
     status = str(_first(r, STATUS_KEYS) or "").strip().lower()
