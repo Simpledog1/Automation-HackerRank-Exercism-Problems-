@@ -250,6 +250,28 @@ class SourceTests(unittest.TestCase):
             got = client.download_solution_files("u1")
         self.assertEqual(list(got), ["bob.py"])
 
+    def test_exercism_files_come_from_api_host(self):
+        client = exercism_source.ExercismClient("https://api.exercism.org", "t", delay=0)
+        meta = {"solution": {"user": {"is_requester": True},
+                             "file_download_base_url": "https://exercism.org/api/v1/solutions/u1/files/",
+                             "files": ["bob.py", ".exercism/config.json"]}}
+        api = "https://api.exercism.org/v1/solutions/u1/files/"
+        files = {"https://api.exercism.org/v1/solutions/u1": json.dumps(meta).encode(),
+                 api + ".exercism/config.json": json.dumps({"files": {"solution": ["bob.py"]}}).encode(),
+                 api + "bob.py": b"x = 1\n"}
+        with mock.patch.object(client, "_get", side_effect=lambda u: files[u]):
+            self.assertEqual(client.download_solution_files("u1"), {"bob.py": b"x = 1\n"})
+
+    def test_bot_check_page_is_not_reported_as_bad_token(self):
+        import urllib.error
+        client = exercism_source.ExercismClient("https://api.exercism.org", "t", delay=0)
+        err = urllib.error.HTTPError("https://exercism.org/x", 403, "no", {},
+                                     io.BytesIO(b"<!DOCTYPE html><html><title>Just a moment...</title>"))
+        with mock.patch("urllib.request.urlopen", side_effect=err):
+            with self.assertRaises(RuntimeError) as ctx:
+                client._get("https://exercism.org/x")
+        self.assertNotIsInstance(ctx.exception, exercism_source.AuthError)
+
     def test_exercism_refuses_other_users_solution(self):
         client = exercism_source.ExercismClient("https://api", "t", delay=0)
         meta = {"solution": {"user": {"is_requester": False}, "file_download_base_url": "B/", "files": []}}
@@ -267,6 +289,13 @@ class SourceTests(unittest.TestCase):
         with mock.patch("urllib.request.urlopen", side_effect=err):
             with self.assertRaises(exercism_source.AuthError):
                 client.list_solutions()
+
+    def test_clean_token_handles_messy_paste(self):
+        tok = "0123abcd-0000-4000-8000-0123456789ab"
+        self.assertEqual(exercism_source.clean_token(f"x{tok}{tok}{tok}junk"), tok)
+        self.assertEqual(exercism_source.clean_token(f"  {tok}\n"), tok)
+        other = "ffffffff-0000-4000-8000-0123456789ab"
+        self.assertEqual(exercism_source.clean_token(f"{tok}{other}"), f"{tok}{other}")  # ambiguous: as-is
 
     def test_token_only_sent_to_exercism(self):
         client = exercism_source.ExercismClient("https://api.exercism.org", "t", delay=0)
@@ -347,6 +376,31 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(len(out), 1)
         self.assertEqual(out[0].files["1.py"], b"print(2)\n")
         self.assertEqual(out[0].title, "Triangle Quest")
+
+    def test_hackerrank_real_export_layout(self):
+        # Same shape as the real export: no status, no timestamps, score 1.0 = solved.
+        recs = {"submissions": [
+            {"challenge": " Triangle Quest", "code": "old\n", "contest": "Master",
+             "language": "python3", "score": 1.0},
+            {"challenge": "Triangle Quest", "code": "print('new')\n", "contest": "Master",
+             "language": "pypy3", "score": 1.0},
+            {"challenge": "Words Score", "code": "x", "contest": "Master",
+             "language": "python3", "score": 0.5},
+            {"challenge": "Java If-Else", "code": "class A {}", "contest": "Master",
+             "language": "java", "score": 1.0},
+        ]}
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+            path = Path(d) / "user_data.json"
+            path.write_text(json.dumps(recs))
+            out, seen = hackerrank_source.read_export(path)
+        self.assertEqual(seen, 4)
+        by_title = {c.title: c for c in out}
+        self.assertEqual(set(by_title), {"Triangle Quest", "Java If-Else"})  # partial score skipped
+        tq = by_title["Triangle Quest"]
+        self.assertEqual(tq.files["1.py"], b"print('new')\n")  # later submission wins
+        self.assertFalse(tq.title_from_slug)
+        self.assertEqual(tq.url, "")  # no slug in export: no invented URL
+        self.assertIn("full score", tq.evidence)
 
     def test_hackerrank_unrecognized_export_fails_loudly(self):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:

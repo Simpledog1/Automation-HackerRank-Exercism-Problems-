@@ -164,7 +164,8 @@ def upload(cfg: Config, repo: RepoConfig, ledger: Ledger, c: Candidate, today: s
             with open(full, "xb") as fh:  # "x" = fail rather than overwrite
                 fh.write(c.files[name])
             created[rel] = hashes[rel]
-        message = f"Add {c.title} solution\n\nSource: {c.url}\nUploaded by SolutionSync"
+        message = f"Add {c.title} solution\n\n" + (f"Source: {c.url}\n" if c.url else "") \
+            + "Uploaded by SolutionSync"
         sha = gitsync.commit_new_files(repo.path, [rel for _, rel in pairs], message)
     except Exception as exc:
         gitsync.unstage_and_remove(repo.path, created)

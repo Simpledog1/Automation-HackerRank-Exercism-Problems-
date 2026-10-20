@@ -1,18 +1,20 @@
 """HackerRank: read your official account-data export (Settings -> Export Data).
 
-HackerRank has no official API for your submitted code. Its documented export is a
-ZIP of JSON files that includes your submissions. Download it into the inbox folder
-and this module reads the newest one.
+HackerRank has no official API for your submitted code. Its export (a .json file,
+or a ZIP of them) includes your submissions. Put it in the inbox folder and this
+module reads the newest one.
 
-The export's exact JSON layout is not publicly documented, so the reader looks for
-submission-like records by common key names and refuses to guess when it cannot
-find code, a challenge name, a language and an "Accepted" status.
+Verified layout (Oct 2026): submissions[] = {challenge, code, contest, language, score}
+with no status or timestamp; score 1.0 means full marks. The reader also accepts
+other key names, and refuses to guess when it cannot find code, a challenge name,
+a language and proof of completion.
 """
 from __future__ import annotations
 
 import gzip
 import json
 import logging
+import re
 import zipfile
 from pathlib import Path
 
@@ -22,7 +24,7 @@ log = logging.getLogger(__name__)
 
 CODE_KEYS = ("code", "source_code", "source")
 SLUG_KEYS = ("challenge_slug", "slug")
-NAME_KEYS = ("challenge_name", "name", "title")
+NAME_KEYS = ("challenge_name", "challenge", "name", "title")  # real export: "challenge"
 LANG_KEYS = ("language", "lang")
 STATUS_KEYS = ("status", "verdict", "result")
 TIME_KEYS = ("created_at", "submitted_at", "time")
@@ -106,30 +108,48 @@ def read_export(path: Path) -> tuple[list[Candidate], int]:
             "no submission records with source code found; the export format may differ "
             "from what this reader expects (see TROUBLESHOOTING.md)")
 
-    best: dict[str, Candidate] = {}
-    for r in records:
-        status = str(_first(r, STATUS_KEYS) or "").strip().lower()
+    best: dict[str, tuple[tuple[str, int], Candidate]] = {}
+    for index, r in enumerate(records):
         lang = str(_first(r, LANG_KEYS) or "").strip().lower()
-        if status not in ACCEPTED or not lang:
-            continue  # only accepted submissions prove the problem was solved
+        evidence = _completion_evidence(r)
+        if not evidence or not lang:
+            continue  # only accepted / full-score submissions prove the problem was solved
         name = _first(r, NAME_KEYS)
         slug = str(_first(r, SLUG_KEYS) or "").strip().lower() or None
         title = str(name).strip() if name else slug_to_title(slug or "")
-        slug = slug or title.lower().replace(" ", "-")
-        code = _first(r, CODE_KEYS)
+        is_python = lang.startswith(("python", "pypy"))
+        # python3 and pypy3 solutions of one challenge go to the same file, so share one id
+        item_id = f"{slug or re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')}:" \
+                  f"{'python' if is_python else lang}"
         when = str(_first(r, TIME_KEYS) or "")
         c = Candidate(
-            platform="hackerrank", item_id=f"{slug}:{lang}", title=title, language=lang,
-            url=f"https://www.hackerrank.com/challenges/{slug}/problem",
+            platform="hackerrank", item_id=item_id, title=title, language=lang,
+            # Without a slug the real problem URL is unknown; don't invent one.
+            url=f"https://www.hackerrank.com/challenges/{slug}/problem" if slug else "",
             method=f"official account export ({path.name})",
-            evidence=f"submission status 'Accepted'" + (f" at {when}" if when else ""),
-            completed_at=when, files={"1.py" if lang.startswith(("python", "pypy")) else "solution.txt":
-                                      str(code).encode("utf-8")},
+            evidence=evidence + (f" at {when}" if when else ""),
+            completed_at=when,
+            files={"1.py" if is_python else "solution.txt": str(_first(r, CODE_KEYS)).encode("utf-8")},
             source_ref=str(r.get("id", "")),
             title_from_slug=not name,
         )
-        # keep the newest accepted submission per challenge + language
-        if c.key not in best or when > best[c.key].completed_at:
-            best[c.key] = c
-    out = sorted(best.values(), key=lambda c: (c.completed_at, c.item_id))
+        # Keep the newest qualifying submission. The export has no timestamps, so a
+        # later position counts as newer (shortcut: the file appears to list oldest
+        # first; revisit if HackerRank adds timestamps or reorders the export).
+        order = (when, index)
+        if c.key not in best or order > best[c.key][0]:
+            best[c.key] = (order, c)
+    out = sorted((c for _, c in best.values()), key=lambda c: (c.completed_at, c.item_id))
     return out, len(records)
+
+
+def _completion_evidence(r: dict) -> str | None:
+    """Why this submission counts as solved, or None if it doesn't."""
+    status = str(_first(r, STATUS_KEYS) or "").strip().lower()
+    if status:
+        return "submission status 'Accepted'" if status in ACCEPTED else None
+    score = r.get("score")
+    # The real export has no status; score 1.0 means all test cases passed.
+    if isinstance(score, (int, float)) and score >= 0.999999:
+        return "full score (1.0) in official export"
+    return None

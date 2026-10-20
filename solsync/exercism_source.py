@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 import urllib.error
 import urllib.parse
@@ -51,6 +52,9 @@ class ExercismClient:
             with urllib.request.urlopen(req, timeout=30) as resp:
                 return resp.read()
         except urllib.error.HTTPError as exc:
+            if exc.code == 403 and b"<html" in exc.read(2000).lower():
+                # A website bot-check page, not a token problem.
+                raise RuntimeError("Exercism's website blocked an automated request (HTTP 403)") from None
             if exc.code in (401, 403):
                 raise AuthError(f"Exercism rejected the token (HTTP {exc.code})") from None
             if exc.code == 429 or exc.code >= 500:
@@ -83,7 +87,9 @@ class ExercismClient:
         meta = self._json(f"/v1/solutions/{urllib.parse.quote(uuid)}")["solution"]
         if not (meta.get("user") or {}).get("is_requester", False):
             raise RuntimeError("solution does not belong to the authenticated user")
-        base = meta["file_download_base_url"]
+        # The API returns links on exercism.org/api/..., which shows scripts a bot-check
+        # page; the same files are served by the official API host the CLI uses.
+        base = meta["file_download_base_url"].replace("https://exercism.org/api/", self.api_base + "/", 1)
         files = meta.get("files") or []
         if ".exercism/config.json" not in files:
             raise RuntimeError("no .exercism/config.json; cannot tell which files are yours")
@@ -101,7 +107,15 @@ def make_client(api_base: str, credential_target: str) -> ExercismClient:
     token = read_generic_credential(credential_target)
     if not token:
         raise AuthError(f"No Exercism token in Windows Credential Manager entry '{credential_target}'")
-    return ExercismClient(api_base, token.strip())
+    return ExercismClient(api_base, clean_token(token))
+
+
+def clean_token(stored: str) -> str:
+    """Exercism tokens are UUIDs. A paste into a hidden prompt can repeat it or add
+    stray text, so use the UUID when exactly one distinct one is present."""
+    ids = set(re.findall(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+                         stored.lower()))
+    return ids.pop() if len(ids) == 1 else stored.strip()
 
 
 def to_candidates(solutions: list[dict]) -> list[Candidate]:
