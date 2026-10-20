@@ -26,7 +26,7 @@ SolutionSyncAutomation/
   never leaves a half-written file.
 - **Quota is reserved before writing anything.** Each file is a row in `uploads`. It counts
   while `reserved`, `committed` or `verified`. If nothing reached GitHub, it becomes `failed` and
-  frees its slot. This is why crashes and retries can never push the day above 2.
+  frees its slot. This is why crashes and retries can never push the day above the daily limit.
 - **Commits use `git commit --only -- <new files>`.** Anything you staged yourself stays staged
   and out of the commit. The commit is then checked to contain exactly the new files (all
   "added").

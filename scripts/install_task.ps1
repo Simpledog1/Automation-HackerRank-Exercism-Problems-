@@ -31,7 +31,7 @@ $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" 
 
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings `
     -Principal $principal -Force `
-    -Description "Uploads up to 2 completed HackerRank/Exercism solutions per day. See $Root\README.md" | Out-Null
+    -Description "Uploads up to the daily limit of completed HackerRank/Exercism solutions per day. See $Root\README.md" | Out-Null
 
 $t = Get-ScheduledTask -TaskName $TaskName
 $info = Get-ScheduledTaskInfo -TaskName $TaskName

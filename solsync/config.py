@@ -67,10 +67,10 @@ def load_config(path: Path | None = None, root: Path | None = None) -> Config:
     except (OSError, ValueError) as exc:
         raise ConfigError(f"Cannot read {path}: {exc}") from exc
 
-    limit = raw.get("daily_limit", 2)
-    if not isinstance(limit, int) or not 0 <= limit <= 2:
-        # The 2-file cap is a hard requirement; config may only lower it.
-        raise ConfigError("daily_limit must be an integer from 0 to 2")
+    limit = raw.get("daily_limit", 4)
+    if not isinstance(limit, int) or not 0 <= limit <= 4:
+        # The 4-file cap is a hard maximum; config may only lower it.
+        raise ConfigError("daily_limit must be an integer from 0 to 4")
 
     repos = {}
     for platform in ("hackerrank", "exercism"):

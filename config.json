@@ -1,5 +1,5 @@
 {
-  "daily_limit": 2,
+  "daily_limit": 4,
   "uploads_enabled": true,
   "max_downloads_per_run": 10,
   "repos": {

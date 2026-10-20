@@ -5,7 +5,7 @@ Backs up your **completed** HackerRank and Exercism solutions to your GitHub rep
 - `G:\DAILY\HackerRank-Problems` → `Simpledog1/HackerRank-Problems`
 - `G:\DAILY\Exercism-Problems` → `Simpledog1/Exercism-Problems`
 
-It uploads **at most 2 new solution files per Philippine calendar day, across both
+It uploads **at most 4 new solution files per Philippine calendar day, across both
 platforms combined**, never overwrites anything, and runs once a day via Windows Task
 Scheduler. It is plain Python (standard library only), so it costs nothing to run and needs
 no Claude session or paid service.
@@ -37,7 +37,7 @@ no Claude session or paid service.
 |---|---|
 | `already_present` | Already on GitHub (same content, or a folder with that exercise name). |
 | `eligible` | Missing from GitHub and safe to upload. |
-| `deferred_quota` | Eligible, but today's 2 slots are used up. It goes on a later day. |
+| `deferred_quota` | Eligible, but today's 4 slots are used up. It goes on a later day. |
 | `uploaded_verified` | Pushed, and GitHub confirmed it. |
 | `upload_failed` | Commit or push failed. The commit is kept and retried safely. |
 | `ambiguous_match` | Several folders could match. You decide. |
@@ -158,18 +158,18 @@ Exit codes: `0` success, `1` partial (something needs attention), `2` failed, `3
 
 ## The daily quota
 
-- **Two solution files per Philippine calendar day, total.** Days run midnight to midnight in `Asia/Manila` time, whatever your PC's clock is set to.
+- **Four solution files per Philippine calendar day, total** (`"daily_limit"` in `config.json`). Days run midnight to midnight in `Asia/Manila` time, whatever your PC's clock is set to.
 - **Only real uploads count.** A file counts from the moment it is committed for upload. If the attempt fails before anything reaches GitHub, the slot is freed. Dry runs never count.
 - **Retries on a later day count on that day.** A commit that couldn't be pushed yesterday needs a free slot today before it is pushed.
 - **Exercises are never split across days.** All of an exercise's files must fit in today's remaining quota.
-- **It survives restarts.** Usage is stored in `state\solsync.db`, so restarts, crashes and repeated runs can't exceed the limit. `config.json` can lower the limit to 0 or 1 but can't raise it above 2.
+- **It survives restarts.** Usage is stored in `state\solsync.db`, so restarts, crashes and repeated runs can't exceed the limit. `config.json` can set the limit anywhere from 0 to 4; the cap of 4 is enforced in `solsync\config.py`.
 
 ## Fairness
 
 When both platforms have something to upload, the tool alternates: one HackerRank, then one
 Exercism, then back. The next starting platform is saved after every successful upload, so the
-rotation continues across days. If one platform has nothing eligible, the other may use both
-slots. Within a platform, the oldest completion goes first.
+rotation continues across days. If one platform has nothing eligible, the other may use all
+the slots. Within a platform, the oldest completion goes first.
 
 ## What is and isn't automated
 
