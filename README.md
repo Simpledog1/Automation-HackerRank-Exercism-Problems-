@@ -10,9 +10,9 @@ platforms combined**, never overwrites anything, and runs once a day via Windows
 Scheduler. It is plain Python (standard library only), so it costs nothing to run and needs
 no Claude session or paid service.
 
-> **Current state:** uploads are **off** (`"uploads_enabled": false` in `config.json`).
-> The daily task runs, but only as a dry run, until you finish [Setup](#setup) and switch
-> uploads on.
+> **Current state:** uploads are **on**. The first live run (2026-10-21) uploaded and
+> verified 2 solutions. To pause uploads, set `"uploads_enabled": false` in `config.json`;
+> the daily task then only does dry runs.
 
 ---
 
@@ -92,7 +92,7 @@ data export:
 
 1. On hackerrank.com, click your profile icon, then **Settings**, then **Export Data**, then **Create new archive**.
 2. When it's ready, click **Download archive**. HackerRank allows one new archive every 24 hours, and each expires after 7 days.
-3. Move the downloaded ZIP into `G:\DAILY\SolutionSyncAutomation\inbox\hackerrank\` (create the folder if needed). The newest file there is used.
+3. Move the downloaded file (a `.json`, or a ZIP) into `G:\DAILY\SolutionSyncAutomation\inbox\hackerrank\` (create the folder if needed). The newest file there is used.
 4. **First time only:** HackerRank doesn't publish the export's format, so check that the reader understands yours:
 
    ```powershell
@@ -169,9 +169,9 @@ slots. Within a platform, the oldest completion goes first.
 | Step | Automated? |
 |---|---|
 | Exercism: find completed solutions, download your files, upload | **Yes**, once your token is stored |
-| HackerRank: read the export, find Accepted submissions, upload | **Yes**, once the ZIP is in the inbox |
+| HackerRank: read the export, find full-score submissions, upload | **Yes**, once the export file is in the inbox |
 | HackerRank: create and download the export | **No.** You click it on the website (HackerRank's limit: once per 24 h) |
-| HackerRank export format | **Unverified** until you run `inspect-export` on a real export |
+| HackerRank export format | **Verified** on a real export (Oct 2026): `submissions[]` with `challenge`, `code`, `language`, `score` |
 | Resolving conflicts, ambiguous matches, diverged histories | **No.** The tool stops and tells you |
 
 More help: [TROUBLESHOOTING.md](TROUBLESHOOTING.md). How it's built: [ARCHITECTURE.md](ARCHITECTURE.md).
