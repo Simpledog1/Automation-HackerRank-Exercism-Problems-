@@ -52,19 +52,28 @@ class MatchingTests(unittest.TestCase):
         classify(c, REPO, PY)
         self.assertEqual(c.status, NEEDS_REVIEW)
 
-    def test_hackerrank_folder_follows_section(self):
-        cands = [cand("hackerrank", f"x{i}:python", t, lang, files={"1.py": f"print('{t}')\n".encode()})
-                 for i, (t, lang) in enumerate([("2D Array - DS", "python3"), ("sWAP cASE", "pypy3"),
-                                                ("Day 0: Hello, World.", "python3"),
-                                                ("Welcome to Java!", "java")])]
-        hackerrank_source.assign_sections(cands, PY | {"pypy3": "Python"})
+    def test_hackerrank_folder_follows_section_and_language(self):
+        rows = [("2D Array - DS", "python3"), ("sWAP cASE", "pypy3"),
+                ("Day 0: Hello, World.", "python3"), ("Day 0: Hello, World.", "java"),
+                ("Welcome to Java!", "java8"), ("Not A Real Challenge", "python3"),
+                ("sWAP cASE", "ruby")]
+        cands = []
+        for i, (title, lang) in enumerate(rows):
+            fname = (hackerrank_source.language_family(lang) or ("", "solution.txt"))[1]
+            cands.append(cand("hackerrank", f"x{i}", title, lang,
+                              files={fname: f"print('{i} {title}')\n".encode()}))
+        hackerrank_source.assign_sections(cands)
         for c in cands:
             classify(c, REPO, PY)
-        ps, py, days, java = cands
-        self.assertEqual(ps.dest_paths, ["Problem Solving (Python)/2D Array - DS/1.py"])
-        self.assertEqual(py.dest_paths, ["Python/sWAP cASE/1.py"])
-        self.assertEqual(days.status, NEEDS_REVIEW)   # 30 Days of Code: not uploaded
-        self.assertEqual(java.status, NEEDS_REVIEW)   # other language: not uploaded
+        self.assertEqual([c.dest_paths for c in cands[:5]], [
+            ["Problem Solving (Python)/2D Array - DS/1.py"],
+            ["Python/sWAP cASE/1.py"],
+            ["30 Days of Code (Python)/Day 0 Hello, World/1.py"],
+            ["30 Days of Code (Java)/Day 0 Hello, World/Solution.java"],
+            ["Java/Welcome to Java!/Solution.java"],
+        ])
+        self.assertEqual(cands[5].status, NEEDS_REVIEW)  # section unknown
+        self.assertEqual(cands[6].status, NEEDS_REVIEW)  # language not supported
 
     def test_hackerrank_unknown_section_still_detects_existing_folder(self):
         c = cand("hackerrank", "bob:python", "Bob", "python3", files={"1.py": b"print('other')\n"})
@@ -290,6 +299,24 @@ class SourceTests(unittest.TestCase):
             with self.assertRaises(RuntimeError) as ctx:
                 client._get("https://exercism.org/x")
         self.assertNotIsInstance(ctx.exception, exercism_source.AuthError)
+
+    def test_exercism_subfolder_solution_saved_flat(self):
+        client = exercism_source.ExercismClient("https://api.exercism.org", "t", delay=0)
+        base = "https://api.exercism.org/v1/solutions/u1/files/"
+        meta = {"solution": {"user": {"is_requester": True}, "file_download_base_url": base,
+                             "files": ["lib/hello_world.dart", "test/hello_world_test.dart",
+                                       ".exercism/config.json"]}}
+        files = {"https://api.exercism.org/v1/solutions/u1": json.dumps(meta).encode(),
+                 base + ".exercism/config.json":
+                     json.dumps({"files": {"solution": ["lib/hello_world.dart"]}}).encode(),
+                 base + "lib/hello_world.dart": b"String hello() => 'Hello, World!';\n"}
+        with mock.patch.object(client, "_get", side_effect=lambda u: files[u]):
+            self.assertEqual(list(client.download_solution_files("u1")), ["hello_world.dart"])
+        meta["solution"]["files"].append("../evil.dart")
+        files[base + ".exercism/config.json"] = json.dumps({"files": {"solution": ["../evil.dart"]}}).encode()
+        with mock.patch.object(client, "_get", side_effect=lambda u: files[u]):
+            with self.assertRaises(RuntimeError):
+                client.download_solution_files("u1")
 
     def test_exercism_refuses_other_users_solution(self):
         client = exercism_source.ExercismClient("https://api", "t", delay=0)

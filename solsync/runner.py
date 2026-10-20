@@ -193,7 +193,7 @@ def discover(cfg: Config, st: dict[str, PlatformState]) -> exercism_source.Exerc
     else:
         try:
             hr.candidates, hr.records_seen = hackerrank_source.read_export(export)
-            hackerrank_source.assign_sections(hr.candidates, cfg.repos["hackerrank"].language_dirs)
+            hackerrank_source.assign_sections(hr.candidates)
             hr.access = f"ok (export {export.name})"
         except (hackerrank_source.ExportFormatError, OSError, ValueError) as exc:
             hr.access, hr.failures = f"export unreadable: {exc}", hr.failures + 1

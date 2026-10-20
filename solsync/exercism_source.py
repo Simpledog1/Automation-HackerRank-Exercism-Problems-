@@ -97,9 +97,15 @@ class ExercismClient:
         wanted = (config.get("files") or {}).get("solution") or []
         result = {}
         for name in wanted:
-            if name not in files or "/" in name or "\\" in name or name.startswith("."):
-                raise RuntimeError(f"solution file '{name}' is missing or not a plain file name")
-            result[name] = self._get(base + urllib.parse.quote(name))
+            parts = name.split("/")
+            # Some tracks keep the solution in a subfolder (Dart: lib/hello_world.dart).
+            # Save it flat under its file name, like every other exercise in the repo.
+            if name not in files or "\\" in name or any(p in ("", ".", "..") or p.startswith(".")
+                                                         for p in parts):
+                raise RuntimeError(f"solution file '{name}' is missing or not a safe path")
+            if parts[-1] in result:
+                raise RuntimeError(f"two solution files are both named '{parts[-1]}'")
+            result[parts[-1]] = self._get(base + urllib.parse.quote(name))
         return result
 
 

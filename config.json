@@ -6,14 +6,13 @@
     "hackerrank": {
       "path": "G:/DAILY/HackerRank-Problems",
       "remote_url": "https://github.com/Simpledog1/HackerRank-Problems.git",
-      "branch": "main",
-      "language_dirs": {"python3": "Python", "python": "Python", "pypy3": "Python"}
+      "branch": "main"
     },
     "exercism": {
       "path": "G:/DAILY/Exercism-Problems",
       "remote_url": "https://github.com/Simpledog1/Exercism-Problems.git",
       "branch": "main",
-      "language_dirs": {"python": "Python"}
+      "language_dirs": {"python": "Python", "dart": "Dart"}
     }
   },
   "exercism": {

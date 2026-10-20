@@ -117,10 +117,9 @@ def read_export(path: Path) -> tuple[list[Candidate], int]:
         name = _first(r, NAME_KEYS)
         slug = str(_first(r, SLUG_KEYS) or "").strip().lower() or None
         title = str(name).strip() if name else slug_to_title(slug or "")
-        is_python = lang.startswith(("python", "pypy"))
-        # python3 and pypy3 solutions of one challenge go to the same file, so share one id
-        item_id = f"{slug or re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')}:" \
-                  f"{'python' if is_python else lang}"
+        family, file_name = language_family(lang) or (lang, "solution.txt")
+        # python3 and pypy3 (or java8/java15) attempts share one file, so share one id
+        item_id = f"{slug or re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')}:{family.lower()}"
         when = str(_first(r, TIME_KEYS) or "")
         c = Candidate(
             platform="hackerrank", item_id=item_id, title=title, language=lang,
@@ -129,7 +128,7 @@ def read_export(path: Path) -> tuple[list[Candidate], int]:
             method=f"official account export ({path.name})",
             evidence=evidence + (f" at {when}" if when else ""),
             completed_at=when,
-            files={"1.py" if is_python else "solution.txt": str(_first(r, CODE_KEYS)).encode("utf-8")},
+            files={file_name: str(_first(r, CODE_KEYS)).encode("utf-8")},
             source_ref=str(r.get("id", "")),
             title_from_slug=not name,
         )
@@ -146,19 +145,30 @@ def read_export(path: Path) -> tuple[list[Candidate], int]:
 SECTIONS_FILE = Path(__file__).with_name("hackerrank_sections.json")
 
 
-def assign_sections(cands: list[Candidate], language_dirs: dict[str, str]) -> None:
-    """Set each candidate's repo folder from its HackerRank section.
+def language_family(lang: str) -> tuple[str, str] | None:
+    """HackerRank language -> (folder language name, solution file name)."""
+    if lang.startswith(("python", "pypy")):
+        return "Python", "1.py"
+    if lang.startswith("java"):
+        return "Java", "Solution.java"  # HackerRank's Java class is always Solution
+    return None
 
-    Only languages listed in config (the Python family) get a folder; the section
-    list comes from scripts/build_hackerrank_sections.py. Unknown sections and other
-    languages keep top_dir "" and go to review.
+
+def assign_sections(cands: list[Candidate]) -> None:
+    """Set each candidate's repo folder from its HackerRank section and language.
+
+    "Python" section in Python -> "Python"; "Problem Solving" in Python ->
+    "Problem Solving (Python)"; "30 Days of Code" in Java -> "30 Days of Code (Java)".
+    Unknown sections or languages keep top_dir "" and go to review.
     """
     from .matching import normalize
     sections = json.loads(SECTIONS_FILE.read_text(encoding="utf-8"))
-    folder_by_name = {normalize(n): folder for folder, names in sections.items() for n in names}
+    section_by_name = {normalize(n): sec for sec, names in sections.items() for n in names}
     for c in cands:
-        if c.language in language_dirs:
-            c.top_dir = folder_by_name.get(normalize(c.title), "")
+        family = (language_family(c.language) or ("", ""))[0]
+        section = section_by_name.get(normalize(c.title))
+        if family and section:
+            c.top_dir = section if section == family else f"{section} ({family})"
 
 
 def _completion_evidence(r: dict) -> str | None:

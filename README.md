@@ -49,10 +49,17 @@ no Claude session or paid service.
 
 The tool copies the folder layout your repos already use:
 
-- **HackerRank, Python section:** `Python/<Challenge Name>/1.py`
-- **HackerRank, Problem Solving** (Algorithms and Data Structures) in Python: `Problem Solving (Python)/<Challenge Name>/1.py`
-- **Other HackerRank sections** (for example 30 Days of Code) and other languages go to `needs_review` and are never uploaded automatically. The export doesn't say which section a challenge is from, so the tool looks it up in `solsync/hackerrank_sections.json`. That file was made once from HackerRank's public challenge lists; `python scripts\build_hackerrank_sections.py` rebuilds it if HackerRank adds new challenges.
-- **Exercism (Python track):** `Python/<Exercise Title>/<your file>.py`, using exactly the solution file Exercism lists for that exercise (for example `bob.py`)
+- **HackerRank** folders are named after the challenge's section, plus the language when the two differ. Python solutions are saved as `1.py`, Java solutions as `Solution.java`.
+
+  | Section | Python | Java |
+  |---|---|---|
+  | Python | `Python/<name>/1.py` | n/a |
+  | Java | n/a | `Java/<name>/Solution.java` |
+  | Problem Solving (Algorithms, Data Structures) | `Problem Solving (Python)/<name>/1.py` | `Problem Solving (Java)/<name>/Solution.java` |
+  | 30 Days of Code | `30 Days of Code (Python)/<name>/1.py` | `30 Days of Code (Java)/<name>/Solution.java` |
+
+  Any other section or language goes to `needs_review` and is never uploaded automatically. The export doesn't say which section a challenge is from, so the tool looks it up in `solsync/hackerrank_sections.json`. That file was made once from HackerRank's public challenge data; `python scripts\build_hackerrank_sections.py` rebuilds it if HackerRank adds new challenges.
+- **Exercism:** `<Track>/<Exercise Title>/<your file>`, using exactly the solution file Exercism lists for that exercise. Tracks: Python (`Python/Bob/bob.py`) and Dart (`Dart/Hello World/hello_world.dart`; Exercism keeps Dart files in `lib/`, and they're saved flat).
 
 Other languages are flagged `needs_review` until you add a mapping under `language_dirs` in
 `config.json`. Existing files are never moved, renamed or overwritten.

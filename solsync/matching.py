@@ -131,8 +131,8 @@ def classify(c: Candidate, repo_files: dict[str, str], language_dirs: dict[str, 
 
     # 3. Genuinely missing. We need the source to know file names and validate it.
     if not top:
-        c.status, c.note = NEEDS_REVIEW, ("no folder rule: not a Python or Problem Solving "
-                                          f"challenge in {c.language} (place it by hand)")
+        c.status, c.note = NEEDS_REVIEW, ("no folder rule: section unknown or language "
+                                          f"'{c.language}' not supported (place it by hand)")
         return
     if c.files is None:
         c.status = NEEDS_SOURCE
