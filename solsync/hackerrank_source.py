@@ -80,7 +80,9 @@ def _walk(node, found: list) -> None:
     if isinstance(node, dict):
         nested = node.get("challenge") if isinstance(node.get("challenge"), dict) else {}
         merged = {**nested, **node} if nested else node
-        if _first(merged, CODE_KEYS) and (_first(merged, SLUG_KEYS) or _first(merged, NAME_KEYS)):
+        # Requiring a language stops look-alikes such as {"code": "PH", "name": "Philippines"}.
+        if _first(merged, CODE_KEYS) and _first(merged, LANG_KEYS) and \
+                (_first(merged, SLUG_KEYS) or _first(merged, NAME_KEYS)):
             found.append(merged)
             return
         for v in node.values():

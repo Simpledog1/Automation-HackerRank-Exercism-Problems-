@@ -214,7 +214,9 @@ def discover(cfg: Config, st: dict[str, PlatformState]) -> exercism_source.Exerc
 def fetch_sources(cfg: Config, ledger: Ledger, client, cands: list[Candidate],
                   state: PlatformState, save: bool) -> None:
     budget = cfg.max_downloads_per_run
-    for c in cands:
+    # Never-seen items first, so old stuck items (conflicts, failed checks) can't
+    # use up the whole download budget every run and starve newer solutions.
+    for c in sorted(cands, key=lambda c: ledger.item(c.key) is not None):
         if c.status != NEEDS_SOURCE:
             continue
         prev = ledger.item(c.key)

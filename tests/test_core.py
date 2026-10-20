@@ -262,11 +262,45 @@ class SourceTests(unittest.TestCase):
             with self.assertRaises(exercism_source.AuthError):
                 exercism_source.make_client("https://api", "missing")
         import urllib.error
-        client = exercism_source.ExercismClient("https://api", "bad", delay=0)
-        err = urllib.error.HTTPError("https://api/x", 401, "no", {}, io.BytesIO(b""))
+        client = exercism_source.ExercismClient("https://api.exercism.org", "bad", delay=0)
+        err = urllib.error.HTTPError("https://api.exercism.org/x", 401, "no", {}, io.BytesIO(b""))
         with mock.patch("urllib.request.urlopen", side_effect=err):
             with self.assertRaises(exercism_source.AuthError):
-                client.check_auth()
+                client.list_solutions()
+
+    def test_token_only_sent_to_exercism(self):
+        client = exercism_source.ExercismClient("https://api.exercism.org", "t", delay=0)
+        with mock.patch("urllib.request.urlopen") as urlopen:
+            for url in ("https://files.example.com/bob.py", "https://evilexercism.org/x",
+                        "http://api.exercism.org/x"):
+                with self.assertRaises(RuntimeError):
+                    client._get(url)
+            urlopen.assert_not_called()
+
+    def test_exercism_reads_all_pages_without_total_pages(self):
+        client = exercism_source.ExercismClient("https://api.exercism.org", "t", delay=0)
+        pages = {1: {"results": [{"uuid": "a"}]}, 2: {"results": [{"uuid": "b"}]}, 3: {"results": []}}
+        with mock.patch.object(client, "_json",
+                               side_effect=lambda p: pages[int(p.split("page=")[1])]):
+            self.assertEqual([s["uuid"] for s in client.list_solutions()], ["a", "b"])
+
+    def test_new_items_are_downloaded_before_old_stuck_ones(self):
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+            ledger = Ledger(Path(d) / "s.db")
+            old = cand(item="python/old")
+            old.status = NEEDS_REVIEW
+            ledger.save_item(old)  # seen in an earlier run
+            items = []
+            for name in ("old", "new"):
+                c = cand(item=f"python/{name}")
+                c.status, c.source_ref = NEEDS_SOURCE, name
+                items.append(c)
+            client = mock.Mock()
+            client.download_solution_files.return_value = {"x.py": b"x = 1\n"}
+            fetch_sources(mock.Mock(max_downloads_per_run=1), ledger, client, items,
+                          PlatformState(), save=False)
+            client.download_solution_files.assert_called_once_with("new")
+            ledger.close()
 
     def test_14_failed_retrieval_backs_off_then_gives_up(self):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
@@ -318,6 +352,10 @@ class SourceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
             with self.assertRaises(hackerrank_source.ExportFormatError):
                 hackerrank_source.read_export(self._zip(d, {"profile": {"name": "x"}}))
+            # a country code/name pair must not look like a submission
+            with self.assertRaises(hackerrank_source.ExportFormatError):
+                hackerrank_source.read_export(
+                    self._zip(d, {"country": {"code": "PH", "name": "Philippines"}}))
 
 
 if __name__ == "__main__":

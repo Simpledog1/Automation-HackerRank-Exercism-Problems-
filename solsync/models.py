@@ -8,7 +8,6 @@ PRESENT = "already_present"          # already in the GitHub repo
 ELIGIBLE = "eligible"                # missing from GitHub and safe to upload
 NEEDS_SOURCE = "needs_source"        # not matched yet; source not downloaded yet
 MISSING_SOURCE = "missing_source"    # completed, but source code could not be found
-UNVERIFIED = "completion_not_verified"
 AMBIGUOUS = "ambiguous_match"        # more than one possible match; needs your review
 CONFLICT = "conflict"                # destination path taken by different content
 NEEDS_REVIEW = "needs_review"        # e.g. failed validation, no folder convention

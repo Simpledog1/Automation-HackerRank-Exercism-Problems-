@@ -21,6 +21,7 @@ from .models import Candidate
 log = logging.getLogger(__name__)
 USER_AGENT = "SolutionSync/1.0 (personal solution backup)"
 COMPLETED = {"completed", "published"}
+TRUSTED_HOSTS = ("exercism.org", "exercism.io")  # and their subdomains
 
 
 class AuthError(Exception):
@@ -38,6 +39,11 @@ class ExercismClient:
         self.delay = delay  # be polite: pause between requests
 
     def _get(self, url: str) -> bytes:
+        # The token must only ever go to Exercism, even if an API response names another host.
+        host = (urllib.parse.urlsplit(url).hostname or "").lower()
+        trusted = any(host == h or host.endswith("." + h) for h in TRUSTED_HOSTS)
+        if urllib.parse.urlsplit(url).scheme != "https" or not trusted:
+            raise RuntimeError(f"refusing to send the Exercism token to {host or url}")
         time.sleep(self.delay)
         req = urllib.request.Request(url, headers={
             "Authorization": f"Bearer {self._token}", "User-Agent": USER_AGENT})
@@ -56,9 +62,6 @@ class ExercismClient:
     def _json(self, path: str) -> dict:
         return json.loads(self._get(self.api_base + path))
 
-    def check_auth(self) -> None:
-        self._json("/v2/solutions?page=1")
-
     def list_solutions(self, max_pages: int = 50) -> list[dict]:
         out, page = [], 1
         while page <= max_pages:
@@ -67,8 +70,10 @@ class ExercismClient:
             if not isinstance(results, list):
                 raise RuntimeError("unexpected /v2/solutions response (no 'results' list)")
             out.extend(results)
-            total = (data.get("meta") or {}).get("total_pages") or 1
-            if not results or page >= total:
+            # Trust total_pages only if present; otherwise read until an empty page,
+            # so a different response shape can never silently hide page 2+.
+            total = (data.get("meta") or {}).get("total_pages")
+            if not results or (total and page >= total):
                 break
             page += 1
         return out

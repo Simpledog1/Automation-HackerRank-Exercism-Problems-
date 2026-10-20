@@ -36,8 +36,4 @@ def read_generic_credential(target: str) -> str | None:
         blob = ctypes.string_at(cred.CredentialBlob, cred.CredentialBlobSize)
     finally:
         advapi32.CredFree(ptr)
-    # cmdkey stores the password as UTF-16; fall back to UTF-8 for other tools.
-    try:
-        return blob.decode("utf-16-le") if len(blob) % 2 == 0 else blob.decode("utf-8")
-    except UnicodeDecodeError:
-        return blob.decode("utf-8", errors="strict")
+    return blob.decode("utf-16-le")  # cmdkey stores the password as UTF-16

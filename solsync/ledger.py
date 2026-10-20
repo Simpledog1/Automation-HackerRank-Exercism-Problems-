@@ -133,11 +133,6 @@ class Ledger:
             b["files"].append((r["file_path"], r["sha256"]))
         return list(batches.values())
 
-    def uploaded_keys(self) -> set[str]:
-        rows = self.db.execute(
-            "SELECT DISTINCT item_key FROM uploads WHERE status IN ('reserved','committed','verified')")
-        return {r[0] for r in rows}
-
     # ---- items -------------------------------------------------------------
     def save_item(self, c, attempts_delta: int = 0, next_retry: str | None = None) -> None:
         self.db.execute(

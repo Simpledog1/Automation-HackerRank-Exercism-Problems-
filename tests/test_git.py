@@ -103,6 +103,14 @@ class GitFlowTests(unittest.TestCase):
         self.assertIn("Python/Ex 2/1.py", self.remote_files(self.hr_bare))
         self.assertEqual(int(sh(self.hr_bare, "rev-list", "--count", "main")), 3)
 
+    def test_two_uploads_into_the_same_repo_in_one_run(self):
+        # The common case while only one platform is set up: both slots go to HackerRank.
+        self.found["hackerrank"] = [cand("hackerrank", 1), cand("hackerrank", 2)]
+        code, s = self.run_sync()
+        self.assertEqual(s["counts"]["uploaded_verified"], 2, s)
+        self.assertEqual(int(sh(self.hr_bare, "rev-list", "--count", "main")), 3)
+        self.assertTrue({"Python/Ex 1/1.py", "Python/Ex 2/1.py"} <= self.remote_files(self.hr_bare))
+
     def test_20_dry_run_changes_nothing(self):
         self.found["hackerrank"] = [cand("hackerrank", 1)]
         before = (sh(self.hr, "rev-parse", "HEAD"), sh(self.hr, "status", "--porcelain"),

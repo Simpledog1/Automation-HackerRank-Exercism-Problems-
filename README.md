@@ -44,7 +44,6 @@ no Claude session or paid service.
 | `conflict` | The destination path exists with different content. Not overwritten. |
 | `needs_review` | Failed a check (for example, a syntax error), or there's no folder convention for that language. |
 | `missing_source` / `retrieval_failed` | Could not fetch the code. Retried later with increasing waits (1h, 2h, 4h … up to 48h), at most 5 tries. |
-| `completion_not_verified` | Not proven complete, so never uploaded. |
 
 ## Where files go
 
