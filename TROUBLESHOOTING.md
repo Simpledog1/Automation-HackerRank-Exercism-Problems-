@@ -3,7 +3,7 @@
 Start with these two commands. They show what went wrong without changing anything.
 
 ```powershell
-cd G:\DAILY\SolutionSyncAutomation
+cd C:\Code\SolutionSync   # wherever you put the SolutionSync folder
 python -m solsync status
 Get-Content logs\solsync.log -Tail 50
 ```
