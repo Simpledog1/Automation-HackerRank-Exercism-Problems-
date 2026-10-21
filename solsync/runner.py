@@ -139,6 +139,11 @@ def reconcile(cfg: Config, repo: RepoConfig, ledger: Ledger, today: str) -> list
     return push_pending(cfg, repo, ledger, today)
 
 
+def commit_message(title: str, url: str | None) -> str:
+    # Conventional Commits subject, all lowercase: "feat: add lasagna solution"
+    return f"feat: add {title.lower()} solution\n\n" + (f"Source: {url}\n" if url else "") + "Uploaded by SolutionSync"
+
+
 def upload(cfg: Config, repo: RepoConfig, ledger: Ledger, c: Candidate, today: str) -> None:
     """Write, commit, push and verify one exercise. Sets c.status."""
     root = repo.path.resolve()
@@ -164,9 +169,7 @@ def upload(cfg: Config, repo: RepoConfig, ledger: Ledger, c: Candidate, today: s
             with open(full, "xb") as fh:  # "x" = fail rather than overwrite
                 fh.write(c.files[name])
             created[rel] = hashes[rel]
-        message = f"Add {c.title} solution\n\n" + (f"Source: {c.url}\n" if c.url else "") \
-            + "Uploaded by SolutionSync"
-        sha = gitsync.commit_new_files(repo.path, [rel for _, rel in pairs], message)
+        sha = gitsync.commit_new_files(repo.path, [rel for _, rel in pairs], commit_message(c.title, c.url))
     except Exception as exc:
         gitsync.unstage_and_remove(repo.path, created)
         ledger.set_batch(batch, "failed", error=str(exc))

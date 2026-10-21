@@ -17,7 +17,7 @@ from solsync.matching import (classify, git_blob_sha, normalize, safe_file_name,
                               validate_source)
 from solsync.models import (AMBIGUOUS, ELIGIBLE, NEEDS_REVIEW, NEEDS_SOURCE,
                             PRESENT, RETRIEVAL_FAILED, Candidate)
-from solsync.runner import PlatformState, fetch_sources, select
+from solsync.runner import PlatformState, commit_message, fetch_sources, select
 
 PY = {"python": "Python", "python3": "Python"}
 REPO = {
@@ -456,6 +456,16 @@ class SourceTests(unittest.TestCase):
             with self.assertRaises(hackerrank_source.ExportFormatError):
                 hackerrank_source.read_export(
                     self._zip(d, {"country": {"code": "PH", "name": "Philippines"}}))
+
+
+class CommitMessageTests(unittest.TestCase):
+    def test_conventional_lowercase_subject_with_source(self):
+        msg = commit_message("A Very Big Sum", "https://www.hackerrank.com/challenges/a-very-big-sum")
+        self.assertEqual(msg.splitlines()[0], "feat: add a very big sum solution")
+        self.assertIn("Source: https://www.hackerrank.com/challenges/a-very-big-sum", msg)
+
+    def test_no_source_line_without_url(self):
+        self.assertEqual(commit_message("Lasagna", None), "feat: add lasagna solution\n\nUploaded by SolutionSync")
 
 
 if __name__ == "__main__":
